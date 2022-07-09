@@ -1,6 +1,7 @@
 package go_redis_pool
 
 import (
+	"context"
 	"github.com/go-redis/redis/v8"
 	config "github.com/ynsluhan/go-config"
 	"log"
@@ -66,7 +67,13 @@ func SetRedisDb() {
 		DialTimeout:  idleTimeout,
 	})
 	//
-	log.Printf("[redis] Redis connecting address：%s:%s/%d success \n", Host, Port, Db)
+	ping := rdb.Ping(context.Background())
+	err := ping.Err()
+	if err != nil {
+		log.Printf("[redis] Redis connecting address：%s:%s/%d error \n", Host, Port, Db)
+	}else {
+		log.Printf("[redis] Redis connecting address：%s:%s/%d success \n", Host, Port, Db)
+	}
 }
 
 /**
