@@ -2,10 +2,10 @@ package go_redis_pool
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-redis/redis/v8"
 	config "github.com/ynsluhan/go-config"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -46,38 +46,52 @@ func init() {
  * @Time 2021-06-08 15:26:02
  */
 func SetRedisDb() {
-	var Host = config.GetEnv(conf.Redis.Host)
-	var Port = conf.Redis.Port
-	var Db, _ = strconv.Atoi(conf.Redis.Db)
+	var host = config.GetEnv(conf.Redis.Host)
+	var port = conf.Redis.Port
+	//var Db, _ = strconv.Atoi(conf.Redis.Db)
+	var db = conf.Redis.Db
 	// 最大连接数
-	var maxIdle, _ = strconv.Atoi(conf.Redis.MaxIdle)
+	var idle = conf.Redis.MaxIdle
+	if idle == 0 {
+		idle = 5
+	}
+	var maxIdle = conf.Redis.MaxIdle
+	if maxIdle == 0 {
+		maxIdle = 5
+	}
 	// 最大空闲数
-	var maxActive, _ = strconv.Atoi(conf.Redis.MaxActive)
+	var maxActive = conf.Redis.MaxActive
+	if maxActive == 0 {
+		maxActive = 2
+	}
 	// 设置空闲超时时间
-	var idleTimeout = time.Minute * 5
-	// 连接设置
-	var connection = Host + ":" + Port
+	var idleTimeout = conf.Redis.Timeout
+	var timeOut time.Duration
+	if idleTimeout == 0 {
+		timeOut = time.Second * 5
+	} else {
+		timeOut = time.Second * time.Duration(idleTimeout)
+	}
 	//
 	rdb = redis.NewClient(&redis.Options{
-		Addr:         connection,
-		Password:     "", // no password set
-		DB:           Db, // use default DB
-		PoolSize:     maxIdle,
-		MinIdleConns: maxActive,
-		DialTimeout:  idleTimeout,
+		Addr:         fmt.Sprintf("%s:%d", host, port),
+		Password:     conf.Redis.Password, // no password set
+		DB:           int(db),             // use default DB
+		PoolSize:     int(maxIdle),
+		MinIdleConns: int(maxActive),
+		DialTimeout:  timeOut,
 	})
-	log.Printf("[redis] Redis connecting address：%s:%s/%d\n", Host, Port, Db)
+	log.Printf("[redis] Redis connecting address：%s:%d/%d \n", host, port, db)
 	// 连接测试
 	go func() {
 		ping := rdb.Ping(context.Background())
 		err := ping.Err()
 		if err != nil {
-			log.Printf("[redis] Redis connect address：%s:%s/%d error \n", Host, Port, Db)
+			log.Fatalf("[redis] Redis connect address：%s:%d/%s error \n", host, port, db)
 		} else {
-			log.Printf("[redis] Redis connect address：%s:%s/%d success \n", Host, Port, Db)
+			log.Printf("[redis] Redis connect address：%s:%d/%d success \n", host, port, db)
 		}
 	}()
-
 }
 
 /**
@@ -91,6 +105,25 @@ func SetRedisSentinel() {
 		log.Print("Redis Sentinel connecting address: ", node.SentinelAddress)
 		// 将地址进行切割
 		AddressList := strings.Split(node.SentinelAddress, ",")
+		//
+		var db = node.Db
+		// 最大连接数
+		var poolSize = node.PoolSize
+		if poolSize == 0 {
+			poolSize = 5
+		}
+		var minIdleConns = node.MinIdleConns
+		if minIdleConns == 0 {
+			minIdleConns = 5
+		}
+		// 设置空闲超时时间
+		var idleTimeout = conf.Redis.Timeout
+		var timeOut time.Duration
+		if idleTimeout == 0 {
+			timeOut = time.Second * 5
+		} else {
+			timeOut = time.Second * time.Duration(idleTimeout)
+		}
 		//建立连接
 		con := &redis.FailoverOptions{
 			// The master name.
@@ -100,11 +133,13 @@ func SetRedisSentinel() {
 			// Following options are copied from Options struct.
 			Password: node.Password,
 			// db
-			DB: node.Db,
+			DB: int(db),
 			// 连接池个数
-			PoolSize: node.PoolSize,
+			PoolSize: int(poolSize),
 			// 最小空闲个数
-			MinIdleConns: node.MinIdleConns,
+			MinIdleConns: int(minIdleConns),
+			//
+			DialTimeout: timeOut,
 		}
 		// 获取连接
 		// 设置连接
