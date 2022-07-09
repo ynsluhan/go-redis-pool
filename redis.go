@@ -66,14 +66,18 @@ func SetRedisDb() {
 		MinIdleConns: maxActive,
 		DialTimeout:  idleTimeout,
 	})
-	//
-	ping := rdb.Ping(context.Background())
-	err := ping.Err()
-	if err != nil {
-		log.Printf("[redis] Redis connecting address：%s:%s/%d error \n", Host, Port, Db)
-	}else {
-		log.Printf("[redis] Redis connecting address：%s:%s/%d success \n", Host, Port, Db)
-	}
+	log.Printf("[redis] Redis connecting address：%s:%s/%d\n", Host, Port, Db)
+	// 连接测试
+	go func() {
+		ping := rdb.Ping(context.Background())
+		err := ping.Err()
+		if err != nil {
+			log.Printf("[redis] Redis connect address：%s:%s/%d error \n", Host, Port, Db)
+		} else {
+			log.Printf("[redis] Redis connect address：%s:%s/%d success \n", Host, Port, Db)
+		}
+	}()
+
 }
 
 /**
