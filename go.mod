@@ -1,4 +1,4 @@
-module go-redis-pool
+module github.com/ynsluhan/go-redis-pool
 
 go 1.18
 
