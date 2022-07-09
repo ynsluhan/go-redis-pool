@@ -30,9 +30,13 @@ func init() {
 	// 根据env获取host
 	conf = config.GetConf()
 	// rdb 初始化
-	SetRedisDb()
+	if conf.Redis.Enable {
+		SetRedisDb()
+	}
 	// sentinel 初始化
-	SetRedisSentinel()
+	if len(conf.Sentinel) != 0 {
+		SetRedisSentinel()
+	}
 }
 
 /**
@@ -62,7 +66,7 @@ func SetRedisDb() {
 		DialTimeout:  idleTimeout,
 	})
 	//
-	log.Printf("Redis connecting address：%s:%s/%d", Host, Port, Db)
+	log.Printf("[redis] Redis connecting address：%s:%s/%d success \n", Host, Port, Db)
 }
 
 /**
@@ -94,10 +98,10 @@ func SetRedisSentinel() {
 		// 获取连接
 		// 设置连接
 		if i == 0 {
-			log.Println("Redis sentinel master init success.")
+			log.Println("[redis sentinel] master init success.")
 			rdbM = redis.NewFailoverClient(con)
 		} else {
-			log.Println("Redis sentinel slave init success.")
+			log.Println("[redis sentinel] slave init success.")
 			rdbS = redis.NewFailoverClient(con)
 		}
 	}
